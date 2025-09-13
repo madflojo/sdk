@@ -1,42 +1,57 @@
 package mock
 
 import (
-    "fmt"
-    "io"
-    "net/http"
-    "strings"
+	"bytes"
+	"fmt"
+	"io"
+	"net/http"
 
-    sdk "github.com/tarmac-project/sdk/http"
+	sdkhttp "github.com/tarmac-project/sdk/http"
 )
 
+// MockClient implements sdkhttp.Client with configurable responses and call
+// recording for tests. It never performs network I/O.
 type MockClient struct {
-	// responses maps method+url to predefined responses
+	// responses maps "METHOD URL" keys to predefined responses.
 	responses map[string]*Response
 
-	// DefaultResponse is returned when no matching response is found
+	// DefaultResponse is returned when no method/URL-specific response exists.
 	DefaultResponse *Response
 
-	// Calls tracks which endpoints were called
+	// Calls records each request observed by the mock client.
 	Calls []Call
 }
 
+// Response describes a synthetic HTTP response used by the mock.
 type Response struct {
+	// StatusCode is the HTTP status code to return.
 	StatusCode int
-	Status     string
-	Body       []byte
-	Header     http.Header
-	Error      error
+	// Status is the HTTP status text to return.
+	Status string
+	// Body is the raw payload returned to callers.
+	Body []byte
+	// Header holds headers to include in the response.
+	Header http.Header
+	// Error, when set, is returned instead of a successful response.
+	Error error
 }
 
+// Call captures a single client operation issued through the mock.
 type Call struct {
+	// Method is the HTTP method used.
 	Method string
-	URL    string
-	Body   []byte
+	// URL is the requested URL string.
+	URL string
+	// Body contains the request body, if provided.
+	Body []byte
+	// Header holds request headers passed by the caller.
 	Header http.Header
 }
 
+// Config controls construction of a MockClient.
 type Config struct {
-    DefaultResponse *Response
+	// DefaultResponse is used when no specific response has been configured.
+	DefaultResponse *Response
 }
 
 // New creates a new mock HTTP client.
@@ -66,43 +81,45 @@ func New(config Config) *MockClient {
 
 // responseFor returns the configured response for method+url or the default.
 func (m *MockClient) responseFor(method, url string) *Response {
-    key := method + " " + url
-    if resp, ok := m.responses[key]; ok {
-        return resp
-    }
-    return m.DefaultResponse
+	key := method + " " + url
+	if resp, ok := m.responses[key]; ok {
+		return resp
+	}
+	return m.DefaultResponse
 }
 
-// toSDKResponse converts a mock Response into an sdk.Response with copied headers.
-func toSDKResponse(r *Response) *sdk.Response {
-    resp := &sdk.Response{
-        StatusCode: r.StatusCode,
-        Status:     r.Status,
-        Header:     make(http.Header),
-        Body:       io.NopCloser(strings.NewReader(string(r.Body))),
-    }
-    if r.Header != nil {
-        for k, values := range r.Header {
-            for _, v := range values {
-                resp.Header.Add(k, v)
-            }
-        }
-    }
-    return resp
+// toSDKResponse converts a mock Response into an sdkhttp.Response with copied headers.
+func toSDKResponse(r *Response) *sdkhttp.Response {
+	resp := &sdkhttp.Response{
+		StatusCode: r.StatusCode,
+		Status:     r.Status,
+		Header:     make(http.Header),
+		Body:       io.NopCloser(bytes.NewReader(r.Body)),
+	}
+	if r.Header != nil {
+		for k, values := range r.Header {
+			for _, v := range values {
+				resp.Header.Add(k, v)
+			}
+		}
+	}
+	return resp
 }
 
 // readAll is a small helper to read request bodies consistently.
 func readAll(r io.Reader) ([]byte, error) {
-    if r == nil {
-        return nil, nil
-    }
-    b, err := io.ReadAll(r)
-    if err != nil {
-        return nil, fmt.Errorf("failed to read request body: %w", err)
-    }
-    return b, nil
+	if r == nil {
+		return nil, nil
+	}
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read request body: %w", err)
+	}
+	return b, nil
 }
 
+// On starts configuration of a response for a given method and URL.
+// It returns a builder used to define the returned response or error.
 func (m *MockClient) On(method, url string) *ResponseBuilder {
 	key := method + " " + url
 	return &ResponseBuilder{
@@ -111,24 +128,26 @@ func (m *MockClient) On(method, url string) *ResponseBuilder {
 	}
 }
 
-func (m *MockClient) Get(url string) (*sdk.Response, error) {
+// Get records and returns the configured response for a GET request.
+func (m *MockClient) Get(url string) (*sdkhttp.Response, error) {
 	m.Calls = append(m.Calls, Call{
 		Method: "GET",
 		URL:    url,
 	})
 
-    resp := m.responseFor("GET", url)
-    if resp.Error != nil {
-        return nil, resp.Error
-    }
-    return toSDKResponse(resp), nil
+	resp := m.responseFor("GET", url)
+	if resp.Error != nil {
+		return nil, resp.Error
+	}
+	return toSDKResponse(resp), nil
 }
 
-func (m *MockClient) Post(url, contentType string, body io.Reader) (*sdk.Response, error) {
-    bodyBytes, err := readAll(body)
-    if err != nil {
-        return nil, err
-    }
+// Post records and returns the configured response for a POST request.
+func (m *MockClient) Post(url, contentType string, body io.Reader) (*sdkhttp.Response, error) {
+	bodyBytes, err := readAll(body)
+	if err != nil {
+		return nil, err
+	}
 
 	m.Calls = append(m.Calls, Call{
 		Method: "POST",
@@ -139,18 +158,19 @@ func (m *MockClient) Post(url, contentType string, body io.Reader) (*sdk.Respons
 		},
 	})
 
-    resp := m.responseFor("POST", url)
-    if resp.Error != nil {
-        return nil, resp.Error
-    }
-    return toSDKResponse(resp), nil
+	resp := m.responseFor("POST", url)
+	if resp.Error != nil {
+		return nil, resp.Error
+	}
+	return toSDKResponse(resp), nil
 }
 
-func (m *MockClient) Put(url, contentType string, body io.Reader) (*sdk.Response, error) {
-    bodyBytes, err := readAll(body)
-    if err != nil {
-        return nil, err
-    }
+// Put records and returns the configured response for a PUT request.
+func (m *MockClient) Put(url, contentType string, body io.Reader) (*sdkhttp.Response, error) {
+	bodyBytes, err := readAll(body)
+	if err != nil {
+		return nil, err
+	}
 
 	m.Calls = append(m.Calls, Call{
 		Method: "PUT",
@@ -161,31 +181,33 @@ func (m *MockClient) Put(url, contentType string, body io.Reader) (*sdk.Response
 		},
 	})
 
-    resp := m.responseFor("PUT", url)
-    if resp.Error != nil {
-        return nil, resp.Error
-    }
-    return toSDKResponse(resp), nil
+	resp := m.responseFor("PUT", url)
+	if resp.Error != nil {
+		return nil, resp.Error
+	}
+	return toSDKResponse(resp), nil
 }
 
-func (m *MockClient) Delete(url string) (*sdk.Response, error) {
+// Delete records and returns the configured response for a DELETE request.
+func (m *MockClient) Delete(url string) (*sdkhttp.Response, error) {
 	m.Calls = append(m.Calls, Call{
 		Method: "DELETE",
 		URL:    url,
 	})
 
-    resp := m.responseFor("DELETE", url)
-    if resp.Error != nil {
-        return nil, resp.Error
-    }
-    return toSDKResponse(resp), nil
+	resp := m.responseFor("DELETE", url)
+	if resp.Error != nil {
+		return nil, resp.Error
+	}
+	return toSDKResponse(resp), nil
 }
 
-func (m *MockClient) Do(req *sdk.Request) (*sdk.Response, error) {
-    bodyBytes, err := readAll(req.Body)
-    if err != nil {
-        return nil, err
-    }
+// Do records and returns the configured response for an arbitrary request.
+func (m *MockClient) Do(req *sdkhttp.Request) (*sdkhttp.Response, error) {
+	bodyBytes, err := readAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
 
 	m.Calls = append(m.Calls, Call{
 		Method: req.Method,
@@ -194,12 +216,15 @@ func (m *MockClient) Do(req *sdk.Request) (*sdk.Response, error) {
 		Header: req.Header,
 	})
 
-    resp := m.responseFor(req.Method, req.URL.String())
-    if resp.Error != nil {
-        return nil, resp.Error
-    }
-    return toSDKResponse(resp), nil
+	resp := m.responseFor(req.Method, req.URL.String())
+	if resp.Error != nil {
+		return nil, resp.Error
+	}
+	return toSDKResponse(resp), nil
 }
+
+// Compile-time check: ensure MockClient implements the sdkhttp.Client interface.
+var _ sdkhttp.Client = (*MockClient)(nil)
 
 // ResponseBuilder helps configure a response for a specific method and URL.
 type ResponseBuilder struct {

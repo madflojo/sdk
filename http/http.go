@@ -35,50 +35,66 @@ type Client interface {
 	Do(req *Request) (*Response, error)
 }
 
+// Config configures the HTTP client behavior and host integration.
+//
+// SDKConfig supplies the namespace used when making waPC host calls. If the
+// Namespace is empty, it defaults to sdk.DefaultNamespace during New.
+// InsecureSkipVerify controls TLS verification behavior on the host side when
+// supported by the runtime. HostCall allows tests to inject a custom host
+// function; when nil, the client uses wapc.HostCall.
 type Config struct {
+	// SDKConfig provides the runtime namespace for host calls.
 	SDKConfig sdk.RuntimeConfig
+	// InsecureSkipVerify disables TLS verification when supported.
 	InsecureSkipVerify bool
+	// HostCall overrides the waPC host function used for requests.
 	HostCall func(string, string, string, []byte) ([]byte, error)
 }
 
 // httpClient implements Client using waPC host calls.
 type httpClient struct {
-    // cfg holds client configuration, including SDKConfig and TLS behavior.
-    cfg      Config
-    // hostCall performs the waPC invocation; tests may override it.
-    hostCall func(string, string, string, []byte) ([]byte, error)
+	// cfg holds client configuration, including SDKConfig and TLS behavior.
+	cfg Config
+	// hostCall performs the waPC invocation; tests may override it.
+	hostCall func(string, string, string, []byte) ([]byte, error)
 }
 
 // Response represents an HTTP response returned by the host.
 type Response struct {
-    // Status is the HTTP status text (e.g., "OK").
-    Status     string
-    // StatusCode is the numeric HTTP status code (e.g., 200).
-    StatusCode int
-    // Header contains response headers. Nil is treated as empty.
-    Header     http.Header
-    // Body is the response payload stream. It may be nil for empty bodies.
-    Body       io.ReadCloser
+	// Status is the HTTP status text (e.g., "OK").
+	Status string
+	// StatusCode is the numeric HTTP status code (e.g., 200).
+	StatusCode int
+	// Header contains response headers. Nil is treated as empty.
+	Header http.Header
+	// Body is the response payload stream. It may be nil for empty bodies.
+	Body io.ReadCloser
 }
 
 // Request represents an HTTP request to be sent by the client.
 type Request struct {
-    // Method is the HTTP method (e.g., GET, POST).
-    Method string
-    // URL is the full request URL; Host must be non-empty.
-    URL    *url.URL
-    // Header holds request headers. Nil is treated as empty.
-    Header http.Header
-    // Body is an optional request body stream.
-    Body   io.ReadCloser
+	// Method is the HTTP method (e.g., GET, POST).
+	Method string
+	// URL is the full request URL; Host must be non-empty.
+	URL *url.URL
+	// Header holds request headers. Nil is treated as empty.
+	Header http.Header
+	// Body is an optional request body stream.
+	Body io.ReadCloser
 }
 
 var (
+	// ErrInvalidURL indicates a malformed or unsupported URL.
 	ErrInvalidURL = errors.New("invalid URL provided")
+	// ErrMarshalRequest wraps failures while encoding the request payload.
 	ErrMarshalRequest = errors.New("failed to create request")
+	// ErrReadBody wraps failures while reading a request body stream.
 	ErrReadBody = errors.New("failed to read request body")
+	// ErrUnmarshalResponse wraps failures while decoding the host response.
 	ErrUnmarshalResponse = errors.New("failed to unmarshal response")
+	// ErrHostCall wraps errors returned from the waPC host call.
 	ErrHostCall = errors.New("host call failed")
+	// ErrInvalidMethod indicates an HTTP method not permitted by NewRequest.
 	ErrInvalidMethod = errors.New("invalid HTTP method")
 )
 
@@ -226,7 +242,7 @@ func (c *httpClient) Post(urlStr, contentType string, body io.Reader) (*Response
 func (c *httpClient) Put(urlStr, contentType string, body io.Reader) (*Response, error) {
 	// Validate the URL
 	u, err := url.Parse(urlStr)
-	if err != nil || u == nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+	if err != nil || u == nil || u.Host == "" {
 		return nil, ErrInvalidURL
 	}
 
@@ -294,7 +310,7 @@ func (c *httpClient) Put(urlStr, contentType string, body io.Reader) (*Response,
 func (c *httpClient) Delete(urlStr string) (*Response, error) {
 	// Validate the URL
 	u, err := url.Parse(urlStr)
-	if err != nil || u == nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+	if err != nil || u == nil || u.Host == "" {
 		return nil, ErrInvalidURL
 	}
 
