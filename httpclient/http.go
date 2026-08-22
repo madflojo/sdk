@@ -198,7 +198,7 @@ func (c *HTTPClient) Get(urlStr string) (*Response, error) {
 
 	// Create the Protobuf request
 	req := &proto.HTTPClient{
-		Method:   "GET",
+		Method:   http.MethodGet,
 		Url:      urlStr,
 		Insecure: c.cfg.InsecureSkipVerify,
 		Headers:  make(map[string]*proto.Header),
@@ -229,7 +229,7 @@ func (c *HTTPClient) Post(urlStr, contentType string, body io.Reader) (*Response
 		headers["Content-Type"] = &proto.Header{Values: []string{contentType}}
 	}
 	req := &proto.HTTPClient{
-		Method:   "POST",
+		Method:   http.MethodPost,
 		Url:      urlStr,
 		Insecure: c.cfg.InsecureSkipVerify,
 		Body:     bodyBytes,
@@ -261,7 +261,7 @@ func (c *HTTPClient) Put(urlStr, contentType string, body io.Reader) (*Response,
 		headers["Content-Type"] = &proto.Header{Values: []string{contentType}}
 	}
 	req := &proto.HTTPClient{
-		Method:   "PUT",
+		Method:   http.MethodPut,
 		Url:      urlStr,
 		Insecure: c.cfg.InsecureSkipVerify,
 		Body:     bodyBytes,
@@ -280,7 +280,7 @@ func (c *HTTPClient) Delete(urlStr string) (*Response, error) {
 
 	// Create the Protobuf request
 	req := &proto.HTTPClient{
-		Method:   "DELETE",
+		Method:   http.MethodDelete,
 		Url:      urlStr,
 		Insecure: c.cfg.InsecureSkipVerify,
 		Headers:  make(map[string]*proto.Header),
