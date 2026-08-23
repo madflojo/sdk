@@ -11,7 +11,21 @@ permissions:
   pull-requests: write
 
 jobs:
+  native:
+    uses: ./.github/workflows/reusable-native.yml
+    secrets: inherit
+
+  standalone:
+    uses: ./.github/workflows/reusable-standalone.yml
+
+  lint:
+    uses: ./.github/workflows/reusable-lint.yml
+
+  tinygo-candidate:
+    uses: ./.github/workflows/reusable-tinygo-candidate.yml
+
   release-please:
+    needs: [native, standalone, lint, tinygo-candidate]
     runs-on: ubuntu-latest
     steps:
       - uses: googleapis/release-please-action@v5

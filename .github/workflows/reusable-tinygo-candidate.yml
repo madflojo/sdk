@@ -1,0 +1,37 @@
+name: Reusable Candidate TinyGo Verification
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  tinygo:
+    name: TinyGo ${{ matrix.tinygo-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tinygo-version: '0.34.0'
+            build-args: '-target=wasi'
+          - tinygo-version: '0.41.1'
+            build-args: '-target=wasip1 -scheduler=none --no-debug -buildmode=c-shared'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build candidate modules
+        env:
+          TINYGO_IMAGE: tinygo/tinygo:${{ matrix.tinygo-version }}
+          TINYGO_BUILD_ARGS: ${{ matrix.build-args }}
+        run: |
+          docker run --rm \
+            --volume "$PWD:/src" \
+            --workdir /src \
+            --env TINYGO_BUILD_ARGS \
+            --entrypoint sh \
+            "$TINYGO_IMAGE" \
+            -c 'set -eu
+          for package in root function httpclient kv logging metrics sql; do
+            tinygo build $TINYGO_BUILD_ARGS -o "/tmp/${package}.wasm" "./testdata/tinygo/cmd/${package}"
+          done'

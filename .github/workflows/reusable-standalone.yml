@@ -1,0 +1,27 @@
+name: Reusable Standalone Module Verification
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  standalone:
+    name: Go ${{ matrix.go-version }}
+    runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: local
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: ['1.23.x', '1.26.x']
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: false
+      - name: Check standalone modules
+        run: make module-check
