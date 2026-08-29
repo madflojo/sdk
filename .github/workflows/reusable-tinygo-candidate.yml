@@ -28,6 +28,7 @@ jobs:
           docker run --rm \
             --volume "$PWD:/src" \
             --workdir /src \
+            --env GOFLAGS=-buildvcs=false \
             --env TINYGO_BUILD_ARGS \
             --entrypoint sh \
             "$TINYGO_IMAGE" \

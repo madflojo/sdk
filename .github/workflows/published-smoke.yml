@@ -40,6 +40,7 @@ jobs:
           docker run --rm \
             --volume "$PWD:/src" \
             --workdir /src/testdata/tinygo \
+            --env GOFLAGS=-buildvcs=false \
             --env GOWORK=off \
             --entrypoint sh \
             "$TINYGO_IMAGE" \

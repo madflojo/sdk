@@ -2,7 +2,7 @@
 
 all: build tests lint
 
-MODULES = . hostmock function httpclient kv logging metrics sql
+MODULES = . hostmock function httpclient kv logging metrics sql testdata/tinygo
 SUBMODULES = hostmock function httpclient kv logging metrics sql
 
 # Run tests for all components
