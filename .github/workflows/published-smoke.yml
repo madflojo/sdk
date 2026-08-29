@@ -44,12 +44,9 @@ jobs:
             *) echo "Unsupported release tag: $RELEASE_TAG" >&2; exit 1 ;;
           esac
           go get "${module}@${version}"
-          go mod tidy
-      - name: Verify published module graph
+      - name: Build published module graph
         working-directory: testdata/tinygo
-        run: |
-          go mod tidy -diff
-          go build -mod=readonly ./...
+        run: go build -mod=readonly ./...
       - name: Build published modules with TinyGo 0.41.1
         env:
           TINYGO_IMAGE: tinygo/tinygo:0.41.1

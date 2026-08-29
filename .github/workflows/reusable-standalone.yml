@@ -23,5 +23,8 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache: false
+      - name: Check fixture module metadata
+        if: matrix.go-version == '1.26.x'
+        run: make fixture-module-tidy
       - name: Check standalone modules
-        run: make module-check
+        run: make module-check fixture-module-check

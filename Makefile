@@ -1,9 +1,10 @@
-.PHONY: all clean tests lint build format coverage benchmarks module-check
+.PHONY: all clean tests lint build format coverage benchmarks module-check fixture-module-check fixture-module-tidy
 
 all: build tests lint
 
-MODULES = . hostmock function httpclient kv logging metrics sql testdata/tinygo
+MODULES = . hostmock function httpclient kv logging metrics sql
 SUBMODULES = hostmock function httpclient kv logging metrics sql
+FIXTURE_MODULES = testdata/tinygo
 
 # Run tests for all components
 tests:
@@ -69,6 +70,21 @@ module-check:
 		(cd "$$dir" && GOWORK=off go mod tidy -diff) || exit 1; \
 		(cd "$$dir" && GOWORK=off go build -mod=readonly ./...) || exit 1; \
 		(cd "$$dir" && GOWORK=off go test -mod=readonly -race ./...) || exit 1; \
+	done
+
+# Verify fixture modules without loading test-only dependencies of published modules.
+fixture-module-check:
+	@for dir in $(FIXTURE_MODULES); do \
+		echo "Checking fixture module $$dir..."; \
+		(cd "$$dir" && GOWORK=off go build -mod=readonly ./...) || exit 1; \
+		(cd "$$dir" && GOWORK=off go test -mod=readonly -race ./...) || exit 1; \
+	done
+
+# Check fixture metadata with the current Go version, which can load the full published module graph.
+fixture-module-tidy:
+	@for dir in $(FIXTURE_MODULES); do \
+		echo "Checking fixture metadata $$dir..."; \
+		(cd "$$dir" && GOWORK=off go mod tidy -diff) || exit 1; \
 	done
 
 # Clean build artifacts
