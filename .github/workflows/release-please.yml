@@ -13,7 +13,8 @@ permissions:
 jobs:
   native:
     uses: ./.github/workflows/reusable-native.yml
-    secrets: inherit
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   standalone:
     uses: ./.github/workflows/reusable-standalone.yml
