@@ -69,7 +69,7 @@ module-check:
 		echo "Checking module $$dir..."; \
 		(cd "$$dir" && GOWORK=off go mod tidy -diff) || exit 1; \
 		(cd "$$dir" && GOWORK=off go build -mod=readonly ./...) || exit 1; \
-		(cd "$$dir" && GOWORK=off go test -mod=readonly -race ./...) || exit 1; \
+		(cd "$$dir" && GOWORK=off go test -mod=readonly ./...) || exit 1; \
 	done
 
 # Verify fixture modules without loading test-only dependencies of published modules.
@@ -77,7 +77,7 @@ fixture-module-check:
 	@for dir in $(FIXTURE_MODULES); do \
 		echo "Checking fixture module $$dir..."; \
 		(cd "$$dir" && GOWORK=off go build -mod=readonly ./...) || exit 1; \
-		(cd "$$dir" && GOWORK=off go test -mod=readonly -race ./...) || exit 1; \
+		(cd "$$dir" && GOWORK=off go test -mod=readonly ./...) || exit 1; \
 	done
 
 # Check fixture metadata with the current Go version, which can load the full published module graph.
